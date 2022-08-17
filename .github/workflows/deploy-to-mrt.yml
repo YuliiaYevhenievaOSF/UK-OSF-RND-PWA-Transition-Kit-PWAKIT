@@ -3,14 +3,18 @@ name: 'Build and deploy to MRT'
 on:
   workflow_dispatch:
     inputs:
-      build_number:
-        description: 'Build Number'
+      deployment_message:
+        description: 'Deployment message'
         required: true
-        default: '1'
-      environment:
-        description: 'Environment'
+        default: 'CI build'
+      target_slug:
+        description: 'Target slug'
         required: true
-        default: 'SFRA'
+        default: 'sfra-ci'
+      target_url:
+        description: 'Target URL'
+        required: true
+        default: 'https://transition-kit-sfra-ci.mobify-storefront.com/'
 
 jobs:
   deploy:
@@ -18,9 +22,6 @@ jobs:
     # These environment variables must be changed to fit your PWA Kit project.
     env:
       PROJECT_SLUG: 'transition-kit'
-      TARGET_SLUG: 'alisa-sokolyuk'
-      TARGET_URL: 'https://transition-kit-alisa-sokolyuk.mobify-storefront.com/'
-      SLACK_CHANNEL: 'uki-pwa-transition-kit'
 
     steps:
       - name: Checkout the branch
@@ -44,7 +45,7 @@ jobs:
         run: npm run save-credentials -- --user ${{secrets.MRT_API_USER}} --key ${{secrets.MRT_API_TOKEN}}
 
       - name: Push the bundle to MRT
-        run: npm run push -- -m "${{github.event.inputs.build_number}}"
+        run: npm run push -- -m "${{github.event.inputs.deployment_message}}"
 
       - name: Get the bundle ID
         run: |
@@ -67,22 +68,8 @@ jobs:
 
       - name: Read and deploy the bundle ID
         run: |
-            curl 'https://cloud.mobify.com/api/projects/${{ env.PROJECT_SLUG }}/target/${{ env.TARGET_SLUG }}/deploy/' \
+            curl 'https://cloud.mobify.com/api/projects/${{ env.PROJECT_SLUG }}/target/${{ github.event.inputs.target_slug }}/deploy/' \
               --request 'POST' \
               --header "Authorization: Bearer ${{ secrets.MRT_API_TOKEN}}" \
               --header 'Content-Type: application/json' \
               --data '{"bundle_id": "${{ steps.store-bundle-id.outputs.value }}"}'
-      # Here I'm using https://osfdigital.slack.com/apps/A02PDSQK3DL-github-bot but any bot with the
-      # chatWrite permission can be used.
-      # You also need to store the App's API token within your GitHub Repository Settings
-      # Security > Secrets > Actions > New Repository Secret
-      # - `SLACK_BOT_TOKEN` is your Slack App API token
-      - name: Notify Slack channel
-        run: |
-          curl \
-            -X POST \
-            https://slack.com/api/chat.postMessage \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN}}" \
-            --data '{ "channel": "${{ env.SLACK_CHANNEL }}", "unfurl_links": false, "unfurl_media": false, "blocks": [{ "type": "context", "elements": [{ "type": "mrkdwn", "text": "PR `${{github.event.pull_request.head.ref}}` was merged into `${{github.event.pull_request.base.ref}}` by ${{github.event.pull_request.merged_by.login}}" }, { "type": "image", "image_url": "${{github.event.pull_request.merged_by.avatar_url}}", "alt_text": "images" }]}, { "type": "context", "elements": [{ "type": "mrkdwn", "text": "*Title: ${{github.event.pull_request.title}}*" }]}, { "type": "context", "elements": [{ "type": "mrkdwn", "text": ":white_check_mark: Deployed Bundle ${{steps.store-bundle-id.outputs.value}} to <${{ env.TARGET_URL }}|${{ env.TARGET_SLUG }}>" }]}, { "type": "actions", "elements": [{ "type": "button", "text": { "type": "plain_text", "text": "View in GitHub" }, "style": "primary", "url": "${{github.event.pull_request.html_url}}" }]}]}'
-  
