@@ -17,10 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     # These environment variables must be changed to fit your PWA Kit project.
     env:
-      PROJECT_SLUG: 'UTKPW - Transition Kit'
-      TARGET_SLUG: 'Alisa Sokolyuk'
+      PROJECT_SLUG: 'transition-kit'
+      TARGET_SLUG: 'alisa-sokolyuk'
       TARGET_URL: 'https://transition-kit-alisa-sokolyuk.mobify-storefront.com/'
-      SLACK_CHANNEL: 'osf-int-preorder'
 
     steps:
       - name: Checkout the branch
