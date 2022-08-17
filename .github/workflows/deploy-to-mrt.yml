@@ -1,0 +1,80 @@
+name: 'Build and deploy to MRT'
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Build Number'
+        required: true
+        default: '1'
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'SFRA'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # These environment variables must be changed to fit your PWA Kit project.
+    env:
+      PROJECT_SLUG: 'UTKPW - Transition Kit'
+      TARGET_SLUG: 'Alisa Sokolyuk'
+      TARGET_URL: 'https://transition-kit-alisa-sokolyuk.mobify-storefront.com/'
+      SLACK_CHANNEL: 'osf-int-preorder'
+
+    steps:
+      - name: Checkout the branch
+        uses: actions/checkout@v3
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14.x
+          cache: npm
+
+      - name: Install application's dependencies
+        run: npm ci
+
+      # These tokens are to be stored into your GitHub Repository Settings
+      # Security > Secrets > Actions > New Repository Secret
+      # - `MRT_API_USER` is your Managed Runtime username (...maybe you'd want to ask IT a dedicated username instead of yours...)
+      # - `MRT_API_TOKEN` is your Managed Runtime API token
+      # Both can be found into your Managed Runtime Account Settings, top right.
+      - name: Save credentials
+        run: npm run save-credentials -- --user ${{secrets.MRT_API_USER}} --key ${{secrets.MRT_API_TOKEN}}
+
+      - name: Push the bundle to MRT
+        run: npm run push -- -m "${{github.event.inputs.build_number}}"
+
+      - name: Get the bundle ID
+        run: |
+          curl "https://cloud.mobify.com/api/projects/${{ env.PROJECT_SLUG }}/bundles/" \
+            -H "Authorization: Bearer ${{ secrets.MRT_API_TOKEN}}" \
+            -H "Content-Type: application/json" \
+            -o "bundle.json"
+     # jq is used to parse the JSON output of the previous command and retreive the bundle ID.
+      # You can find more information about jq here: https://stedolan.github.io/jq/
+      # - `cmd` is the command that will be executed
+      # - `bundle.json` is the file that contains the JSON output of the previous command
+      # - `-r` is used to indicate that the output of the command should be read as a string
+      # - `outputs.value` is the name of the output that will be stored in the workflow's context
+      # - `value` is the name of the variable
+      - name: Store the bundle ID
+        uses: sergeysova/jq-action@v2
+        id: store-bundle-id
+        with:
+          cmd: 'jq .results[0].id bundle.json -r'
+
+      - name: Read and deploy the bundle ID
+        run: |
+            curl 'https://cloud.mobify.com/api/projects/${{ env.PROJECT_SLUG }}/target/${{ env.TARGET_SLUG }}/deploy/' \
+              --request 'POST' \
+              --header "Authorization: Bearer ${{ secrets.MRT_API_TOKEN}}" \
+              --header 'Content-Type: application/json' \
+              --data '{"bundle_id": "${{ steps.store-bundle-id.outputs.value }}"}'
+      # Here I'm using https://osfdigital.slack.com/apps/A02PDSQK3DL-github-bot but any bot with the
+      # chatWrite permission can be used.
+      # You also need to store the App's API token within your GitHub Repository Settings
+      # Security > Secrets > Actions > New Repository Secret
+      # - `SLACK_BOT_TOKEN` is your Slack App API token
+  
