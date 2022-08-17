@@ -19,7 +19,7 @@ const useEinstein = () => {
         async sendViewProduct(...args) {
             return api.einstein.sendViewProduct(...args)
         },
-        async sendViewReco(...args) { 
+        async sendViewReco(...args) {
             return api.einstein.sendViewReco(...args)
         },
         async sendClickReco(...args) {
