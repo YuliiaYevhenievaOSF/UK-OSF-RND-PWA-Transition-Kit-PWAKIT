@@ -22,6 +22,7 @@ jobs:
     # These environment variables must be changed to fit your PWA Kit project.
     env:
       PROJECT_SLUG: 'transition-kit'
+      SLACK_CHANNEL: 'uki-pwa-transition-kit'
 
     steps:
       - name: Checkout the branch
@@ -73,3 +74,11 @@ jobs:
               --header "Authorization: Bearer ${{ secrets.MRT_API_TOKEN}}" \
               --header 'Content-Type: application/json' \
               --data '{"bundle_id": "${{ steps.store-bundle-id.outputs.value }}"}'
+      - name: Notify Slack channel
+        run: |
+          curl \
+            -X POST \
+            https://slack.com/api/chat.postMessage \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN}}" \
+            --data '{ "channel": "${{ env.SLACK_CHANNEL }}", "unfurl_links": false, "unfurl_media": false, "blocks": [{ "type": "context", "elements": [{ "type": "mrkdwn", "text": " Deployment with the name `${{github.event.inputs.deployment_message}}` was deployed to ${{github.event.inputs.target_url}} by ${{github.event.actor.login}}" }, { "type": "image", "image_url": "${{github.event.actor.avatar_url}}", "alt_text": "images" }]}, { "type": "context", "elements": [{ "type": "mrkdwn", "text": "*Title: ${{github.event.inputs.deployment_message}}*" }]}, { "type": "context", "elements": [{ "type": "mrkdwn", "text": ":white_check_mark: Deployed Bundle ${{steps.store-bundle-id.outputs.value}} to <${{ github.event.inputs.target_url }}|${{ github.event.inputs.target_slug }}>" }]}, { "type": "actions", "elements": [{ "type": "button", "text": { "type": "plain_text", "text": "View in GitHub" }, "style": "primary", "url": "/" }]}]}'
