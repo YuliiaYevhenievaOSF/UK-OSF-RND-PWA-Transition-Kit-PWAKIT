@@ -7,7 +7,7 @@
 
 import React, {useEffect, useState} from 'react'
 import PropTypes from 'prop-types'
-import {useHistory, useParams} from 'react-router-dom'
+import {Link as RouteLink, useHistory, useParams} from 'react-router-dom'
 import {FormattedMessage, useIntl} from 'react-intl'
 import {Helmet} from 'react-helmet'
 
@@ -119,6 +119,9 @@ const ProductList = (props) => {
     const pageUrls = usePageUrls({total})
     const sortUrls = useSortUrls({options: sortingOptions})
     const limitUrls = useLimitUrls()
+
+    const currentIndex = pageUrls.indexOf(basePath) > 0 ? pageUrls.indexOf(basePath) : 0
+    const next = pageUrls[currentIndex + 1]
 
     // If we are loaded and still have no products, show the no results component.
     const showNoResults = !isLoading && productSearchResult && !productSearchResult?.hits
@@ -409,10 +412,30 @@ const ProductList = (props) => {
                             </SimpleGrid>
                             {/* Footer */}
                             <Flex
-                                justifyContent={['center', 'center', 'flex-start']}
+                                justifyContent="center"
                                 paddingTop={8}
                             >
-                                <Pagination currentURL={basePath} urls={pageUrls} />
+                                {/* <Pagination currentURL={basePath} urls={pageUrls} /> */}
+
+                                <Button
+                                 colorScheme='blue'
+                                    width="150px"
+                                    as={RouteLink}
+                                    // Because we are using a button component as a link, the isDisabled flag isn't working
+                                    // as intended, the workaround is to use the current url when its disabled.
+                                    href={next || basePath}
+                                    to={next || basePath}
+                                    aria-label="Next Page"
+                                    isDisabled={!next}
+                                    variant="solid"
+                                >
+                                     <Text>
+                                        {formatMessage({
+                                            defaultMessage: 'Load More'
+                                        })}                                        
+                                    </Text>
+                                </Button>
+
 
                                 {/*
                             Our design doesn't call for a page size select. Show this element if you want
