@@ -10,10 +10,12 @@ import PropTypes from 'prop-types'
 import {useHistory, useLocation} from 'react-router-dom'
 import {getAssetUrl} from 'pwa-kit-react-sdk/ssr/universal/utils'
 import {getAppOrigin} from 'pwa-kit-react-sdk/utils/url'
+import fetch from 'cross-fetch'
 
 // Chakra
-import {Box, useDisclosure, useStyleConfig} from '@chakra-ui/react'
+import {Text, Box, useDisclosure, useStyleConfig} from '@chakra-ui/react'
 import {SkipNavLink, SkipNavContent} from '@chakra-ui/skip-nav'
+import {InfoOutlineIcon} from '@chakra-ui/icons'
 
 // Contexts
 import {CategoriesProvider, CurrencyProvider} from '../../contexts'
@@ -54,8 +56,13 @@ import {resolveSiteFromUrl} from '../../utils/site-utils'
 const DEFAULT_NAV_DEPTH = 3
 const DEFAULT_ROOT_CATEGORY = 'root'
 
+const GEO_LOCATION = {
+    lat: '34.052235',
+    long: '-118.243683'
+}
+
 const App = (props) => {
-    const {children, targetLocale, messages, categories: allCategories = {}} = props
+    const {children, targetLocale, messages, categories: allCategories = {}, privacyPolicy} = props
 
     const appOrigin = getAppOrigin()
 
@@ -69,6 +76,7 @@ const App = (props) => {
 
     const [isOnline, setIsOnline] = useState(true)
     const styles = useStyleConfig('App')
+    const [closestStore, setClosestStore] = useState(undefined)
 
     const configValues = {
         locale: locale.alias || locale.id,
@@ -105,6 +113,21 @@ const App = (props) => {
         watchOnlineStatus((isOnline) => {
             setIsOnline(isOnline)
         })
+        const fetchStore = async () => {
+            const site_id = 'RefArchGlobal'
+            const client_id = '264f0d69-a6b7-4001-a2df-20d025275702'
+            const res = await fetch(
+                `http://localhost:3000/mobify/proxy/ocapi/s/${site_id}/dw/shop/v20_2/stores?latitude=${GEO_LOCATION.lat}&longitude=${GEO_LOCATION.long}&client_id=${client_id}`
+            )
+            if (res.ok) {
+                const storeResult = await res.json()
+                const firstStore = storeResult.data[0]
+                if (firstStore) {
+                    setClosestStore(firstStore)
+                }
+            }
+        }
+        fetchStore()
     }, [])
 
     useEffect(() => {
@@ -235,6 +258,26 @@ const App = (props) => {
                             </Box>
 
                             {!isOnline && <OfflineBanner />}
+
+                            {closestStore && (
+                                <Box
+                                    bg="blue.500"
+                                    w="100%"
+                                    d="flex"
+                                    justifyContent="center"
+                                    alignItems="center"
+                                    p={2}
+                                    color="white"
+                                >
+                                    <InfoOutlineIcon />
+                                    <Text fontWeight="bold" pl={1}>Closest Store: </Text>
+                                    <Text pl={2}>
+                                        {closestStore.name} - {closestStore.address1},{' '}
+                                        {closestStore.state_code}, {closestStore.postal_code}
+                                    </Text>
+                                </Box>
+                            )}
+
                             <AddToCartModalProvider>
                                 <SkipNavContent
                                     style={{
@@ -259,6 +302,13 @@ const App = (props) => {
                                 </SkipNavContent>
 
                                 {!isCheckout ? <Footer /> : <CheckoutFooter />}
+
+
+                                <div>
+                                    {privacyPolicy && (
+                                        <div dangerouslySetInnerHTML={{__html: privacyPolicy.c_body}} />
+                                    )}
+                                </div>
 
                                 <AuthModal {...authModal} />
                             </AddToCartModalProvider>
@@ -330,10 +380,22 @@ Learn more with our localization guide. https://sfdc.co/localization-guide
     // the application.
     const categories = flatten(rootCategory, 'categories')
 
+    let privacyPolicy
+    const site_id = 'RefArchGlobal'
+    const client_id = '264f0d69-a6b7-4001-a2df-20d025275702'
+    const result = await fetch(
+        `http://localhost:3000/mobify/proxy/ocapi/s/${site_id}/dw/shop/v20_2/content/privacy-policy?client_id=${client_id}`
+    )
+
+    if (result.ok) {
+        privacyPolicy = await result.json()
+    }
+
     return {
         targetLocale,
         messages,
         categories,
+        privacyPolicy: privacyPolicy,
         config: res?.locals?.config
     }
 }
@@ -343,6 +405,7 @@ App.propTypes = {
     targetLocale: PropTypes.string,
     messages: PropTypes.object,
     categories: PropTypes.object,
+    privacyPolicy: PropTypes.object,
     config: PropTypes.object
 }
 

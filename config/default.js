@@ -22,10 +22,10 @@ module.exports = {
         commerceAPI: {
             proxyPath: `/mobify/proxy/api`,
             parameters: {
-                clientId: '4c511cd5-cac9-4f14-a8ab-4764596fa259',
-                organizationId: 'f_ecom_zzrb_492',
+                clientId: '264f0d69-a6b7-4001-a2df-20d025275702',
+                organizationId: 'f_ecom_zzrb_039',
                 shortCode: 'kv7kzm78',
-                siteId: 'RefArch'
+                siteId: 'RefArchGlobal'
             }
         },
         // Einstein api config
@@ -62,7 +62,7 @@ module.exports = {
                 path: 'api'
             },
             {
-                host: 'zzrb-492.sandbox.us01.dx.commercecloud.salesforce.com',
+                host: 'zzrb-039.dx.commercecloud.salesforce.com',
                 path: 'ocapi'
             },
             {
