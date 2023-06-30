@@ -13,6 +13,7 @@ import {useIntl} from 'react-intl'
 import {Flex, Heading, Button, Skeleton, Box, Text, VStack, Fade, useTheme} from '@chakra-ui/react'
 import {useProduct} from '../../hooks'
 import {useAddToCartModalContext} from '../../hooks/use-add-to-cart-modal'
+import useWishlist from '../../hooks/use-wishlist'
 
 // project components
 import SwatchGroup from '../../components/swatch-group'
@@ -77,6 +78,7 @@ const ProductView = ({
     addToCart,
     updateCart,
     addToWishlist,
+    removeFromWishlist,
     updateWishlist,
     isProductLoading
 }) => {
@@ -111,6 +113,11 @@ const ProductView = ({
         parseInt(quantity) <= stockLevel
 
     const renderActionButtons = () => {
+        
+        const wishlist = useWishlist()
+        const isInWishlist = !!wishlist.findItemByProductId(
+            variant?.productId
+        )
         const buttons = []
 
         const handleCartItem = async () => {
@@ -131,6 +138,10 @@ const ProductView = ({
             if (!updateWishlist && !addToWishlist) return null
             if (updateWishlist) {
                 updateWishlist(variant, quantity)
+                return
+            }
+            if (isInWishlist && removeFromWishlist) {
+                removeFromWishlist(variant, quantity)
                 return
             }
             addToWishlist(variant, quantity)
@@ -159,7 +170,7 @@ const ProductView = ({
             )
         }
 
-        if (addToWishlist || updateWishlist) {
+        if (addToWishlist || updateWishlist || removeFromWishlist) {
             buttons.push(
                 <ButtonWithRegistration
                     key="wishlist-button"
@@ -170,15 +181,21 @@ const ProductView = ({
                     variant="outline"
                     marginBottom={4}
                 >
-                    {updateWishlist
+                    {isInWishlist
                         ? intl.formatMessage({
-                              defaultMessage: 'Update',
-                              id: 'product_view.button.update'
-                          })
+                            defaultMessage: 'Remove from Wishlist',
+                            id: 'product_view.button.remove_from_wishlist'
+                        })
+                        : updateWishlist
+                        ? intl.formatMessage({
+                            defaultMessage: 'Update',
+                            id: 'product_view.button.update'
+                        })
                         : intl.formatMessage({
-                              defaultMessage: 'Add to Wishlist',
-                              id: 'product_view.button.add_to_wishlist'
-                          })}
+                            defaultMessage: 'Add to Wishlist',
+                            id: 'product_view.button.add_to_wishlist'
+                        })
+                    }
                 </ButtonWithRegistration>
             )
         }

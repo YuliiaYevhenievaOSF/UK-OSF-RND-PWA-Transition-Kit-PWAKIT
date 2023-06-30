@@ -41,7 +41,8 @@ import {
     API_ERROR_MESSAGE,
     MAX_CACHE_AGE,
     TOAST_ACTION_VIEW_WISHLIST,
-    TOAST_MESSAGE_ADDED_TO_WISHLIST
+    TOAST_MESSAGE_ADDED_TO_WISHLIST,
+    TOAST_MESSAGE_REMOVED_FROM_WISHLIST
 } from '../../constants'
 import {rebuildPathWithParams} from '../../utils/url'
 import {useHistory} from 'react-router-dom'
@@ -80,6 +81,8 @@ const ProductDetail = ({category, product, isLoading}) => {
 
     /**************** Wishlist ****************/
     const wishlist = useWishlist()
+    const [wishlistLoading, setWishlistLoading] = useState([])
+
     // TODO: DRY this handler when intl provider is available globally
     const handleAddToWishlist = async (quantity) => {
         try {
@@ -106,6 +109,30 @@ const ProductDetail = ({category, product, isLoading}) => {
                 title: formatMessage(API_ERROR_MESSAGE),
                 status: 'error'
             })
+        }
+    }
+
+    const handleRemoveFromWishlist = async () => {
+        try {
+            setWishlistLoading([...wishlistLoading, product.id])
+            await wishlist.removeListItemByProductId(product.id)
+            toast({
+                title: formatMessage(TOAST_MESSAGE_REMOVED_FROM_WISHLIST),
+                status: 'success',
+                action: (
+                    <Button variant="link" onClick={() => navigate('/account/wishlist')}>
+                        {formatMessage(TOAST_ACTION_VIEW_WISHLIST)}
+                    </Button>
+                )
+            })
+        } catch (e) {
+            console.log(e)
+            toast({
+                title: formatMessage(API_ERROR_MESSAGE),
+                status: 'error'
+            })
+        } finally {
+            setWishlistLoading(wishlistLoading.filter((id) => id !== product.id))
         }
     }
 
@@ -160,6 +187,7 @@ const ProductDetail = ({category, product, isLoading}) => {
                     category={primaryCategory?.parentCategoryTree || []}
                     addToCart={(variant, quantity) => handleAddToCart(variant, quantity)}
                     addToWishlist={(_, quantity) => handleAddToWishlist(quantity)}
+                    removeFromWishlist={() => handleRemoveFromWishlist()}
                     isProductLoading={isLoading}
                     isCustomerProductListLoading={!wishlist.isInitialized}
                 />
