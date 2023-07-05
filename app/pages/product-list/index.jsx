@@ -10,6 +10,8 @@ import PropTypes from 'prop-types'
 import {useHistory, useParams} from 'react-router-dom'
 import {FormattedMessage, useIntl} from 'react-intl'
 import {Helmet} from 'react-helmet'
+import {useCommerceAPI} from '../../commerce-api/contexts'
+
 
 // Components
 import {
@@ -46,6 +48,7 @@ import Refinements from './partials/refinements'
 import SelectedRefinements from './partials/selected-refinements'
 import EmptySearchResults from './partials/empty-results'
 import PageHeader from './partials/page-header'
+import ProductViewModal from '../../components/product-view-modal'
 
 // Icons
 import {FilterIcon, ChevronDownIcon} from '../../components/icons'
@@ -101,6 +104,7 @@ const ProductList = (props) => {
     const params = useParams()
     const {categories} = useCategories()
     const toast = useToast()
+    const api = useCommerceAPI()
 
     // Get the current category from global state.
     let category = undefined
@@ -233,6 +237,19 @@ const ProductList = (props) => {
     // API does not always return a selected sorting order
     if (!selectedSortingOptionLabel) {
         selectedSortingOptionLabel = productSearchResult?.sortingOptions?.[0]
+    }
+
+    const getProduct = async (productId) => {
+        await api.shopperProducts.getProduct({
+            parameters: {
+                id: productId,
+                allImages: true
+            }
+        }).then((response) => {
+            return response.data
+        }).catch((error) => {
+            console.log(error)
+        })
     }
 
     return (
@@ -381,29 +398,55 @@ const ProductList = (props) => {
                                               productId
                                           )
 
+                                          const product = getProduct(productId)
+
                                           return (
-                                              <ProductTile
-                                                  data-testid={`sf-product-tile-${productSearchItem.productId}`}
-                                                  key={productSearchItem.productId}
-                                                  product={productSearchItem}
-                                                  enableFavourite={true}
-                                                  isFavourite={isInWishlist}
-                                                  onFavouriteToggle={(isFavourite) => {
-                                                      const action = isFavourite
-                                                          ? addItemToWishlist
-                                                          : removeItemFromWishlist
-                                                      return action(productSearchItem)
-                                                  }}
-                                                  dynamicImageProps={{
-                                                      widths: [
-                                                          '50vw',
-                                                          '50vw',
-                                                          '20vw',
-                                                          '20vw',
-                                                          '25vw'
-                                                      ]
-                                                  }}
-                                              />
+                                            <Box>
+                                                <ProductTile
+                                                    data-testid={`sf-product-tile-${productSearchItem.productId}`}
+                                                    key={productSearchItem.productId}
+                                                    product={productSearchItem}
+                                                    enableFavourite={true}
+                                                    isFavourite={isInWishlist}
+                                                    onFavouriteToggle={(isFavourite) => {
+                                                        const action = isFavourite
+                                                            ? addItemToWishlist
+                                                            : removeItemFromWishlist
+                                                        return action(productSearchItem)
+                                                    }}
+                                                    dynamicImageProps={{
+                                                        widths: [
+                                                            '50vw',
+                                                            '50vw',
+                                                            '20vw',
+                                                            '20vw',
+                                                            '25vw'
+                                                        ]
+                                                    }}
+                                                />
+                                                <Button
+                                                    key="cart-button"
+                                                    onClick={onOpen}
+                                                    width="100%"
+                                                    variant="solid"
+                                                    marginBottom={4}
+                                                >
+                                                    {formatMessage({
+                                                        defaultMessage: 'Quick View',
+                                                        id: 'product_tile.quick_view'
+                                                    })}
+                                                </Button>
+                                                <Box>
+                                                {isOpen && (
+                                                    <ProductViewModal
+                                                        isOpen={isOpen}
+                                                        onOpen={onOpen}
+                                                        onClose={onClose}
+                                                        product={product}
+                                                    />
+                                                )}
+                                                </Box>
+                                          </Box>
                                           )
                                       })}
                             </SimpleGrid>
